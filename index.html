@@ -61,6 +61,12 @@
 .mq-blank{background:transparent}
 
 .mq-foot{text-align:center;font-family:'Cormorant',serif;font-style:italic;color:#5A4E38;font-size:13px;margin-top:1.5rem;letter-spacing:.05em}
+
+.mq-share{display:flex;gap:10px;justify-content:center;margin-top:1.25rem;flex-wrap:wrap}
+.mq-share-btn{background:transparent;color:#C9A961;border:0.5px solid #7A6642;padding:9px 18px;font-family:'Cinzel',serif;font-weight:500;font-size:10px;letter-spacing:.25em;text-transform:uppercase;cursor:pointer;transition:all .2s;border-radius:2px}
+.mq-share-btn:hover{background:#221B33;border-color:#C9A961;color:#F5D98A}
+.mq-share-btn:disabled{opacity:.5;cursor:default}
+.mq-share-hint{text-align:center;font-family:'Cormorant',serif;font-style:italic;font-size:12px;color:#7A6642;margin-top:.7rem;min-height:16px}
 </style>
 
 <div class="mq">
@@ -93,6 +99,11 @@
   <div id="mqout" style="display:none">
     <div class="mq-sec"><span class="mq-sec-t">Quadratum · матрица</span></div>
     <div class="mq-mat"><table id="mqmat"></table></div>
+    <div class="mq-share">
+      <button class="mq-share-btn" id="mqShareBtn" type="button">Поделиться</button>
+      <button class="mq-share-btn" id="mqLinkBtn" type="button">Скопировать ссылку</button>
+    </div>
+    <div class="mq-share-hint" id="mqShareHint"></div>
     <div class="mq-foot">✦ ex numeris veritas ✦</div>
   </div>
 </div>
@@ -178,6 +189,102 @@
   setupDateField(mqd,2,mqm);
   setupDateField(mqm,2,mqy);
   setupDateField(mqy,4,null);
+
+  // --- Ссылка на результат: ?d=ДД&m=ММ&y=ГГГГ ---
+  function mqBuildLink(){
+    if(!mqd.value||!mqm.value||!mqy.value) return null;
+    const url=new URL(window.location.href);
+    url.search='';
+    url.searchParams.set('d',mqd.value);
+    url.searchParams.set('m',mqm.value);
+    url.searchParams.set('y',mqy.value);
+    return url.toString();
+  }
+
+  function mqParseUrlDate(){
+    const params=new URLSearchParams(window.location.search);
+    const d=params.get('d'),m=params.get('m'),y=params.get('y');
+    if(d&&m&&y){
+      mqd.value=d.replace(/[^0-9]/g,'').slice(0,2);
+      mqm.value=m.replace(/[^0-9]/g,'').slice(0,2);
+      mqy.value=y.replace(/[^0-9]/g,'').slice(0,4);
+      window.mqCalc();
+    }
+  }
+
+  const mqShareHint=document.getElementById('mqShareHint');
+
+  document.getElementById('mqLinkBtn').addEventListener('click',async function(){
+    const link=mqBuildLink();
+    if(!link){mqShareHint.textContent='Сначала введите дату';return;}
+    try{
+      await navigator.clipboard.writeText(link);
+      mqShareHint.textContent='Ссылка скопирована';
+    }catch(e){
+      window.prompt('Скопируйте ссылку:',link);
+    }
+  });
+
+  // --- Поделиться картинкой (html2canvas + Web Share API, с фолбэком на скачивание) ---
+  let mqH2CPromise=null;
+  function loadHtml2Canvas(){
+    if(mqH2CPromise) return mqH2CPromise;
+    mqH2CPromise=new Promise((resolve,reject)=>{
+      if(window.html2canvas){resolve(window.html2canvas);return;}
+      const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      s.onload=()=>resolve(window.html2canvas);
+      s.onerror=()=>reject(new Error('load failed'));
+      document.head.appendChild(s);
+    });
+    return mqH2CPromise;
+  }
+
+  document.getElementById('mqShareBtn').addEventListener('click',async function(){
+    const btn=this;
+    const mq=document.querySelector('.mq');
+    const form=document.querySelector('.mq-form');
+    const shareRow=document.querySelector('.mq-share');
+    const err=document.getElementById('mqerr');
+    btn.disabled=true;
+    mqShareHint.textContent='Готовим изображение…';
+    // на время рендера прячем форму ввода и сами кнопки — они не нужны на картинке
+    const prevForm=form.style.display,prevShare=shareRow.style.display,prevErr=err.style.display;
+    form.style.display='none';
+    shareRow.style.display='none';
+    err.style.display='none';
+    try{
+      const html2canvas=await loadHtml2Canvas();
+      const canvas=await html2canvas(mq,{backgroundColor:'#0F0D1A',scale:2});
+      const blob=await new Promise(res=>canvas.toBlob(res,'image/jpeg',0.92));
+      if(!blob) throw new Error('no blob');
+      const file=new File([blob],'satomi-numero.jpg',{type:'image/jpeg'});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){
+        try{
+          await navigator.share({files:[file],title:'Satomi Numero'});
+          mqShareHint.textContent='';
+        }catch(shareErr){
+          if(shareErr&&shareErr.name==='AbortError'){mqShareHint.textContent='';}
+          else{throw shareErr;}
+        }
+      }else{
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(blob);
+        a.download='satomi-numero.jpg';
+        a.click();
+        mqShareHint.textContent='Изображение скачано — прикрепите его в мессенджер или письмо вручную';
+      }
+    }catch(e){
+      mqShareHint.textContent='Не удалось создать изображение, попробуйте ещё раз';
+    }finally{
+      form.style.display=prevForm;
+      shareRow.style.display=prevShare;
+      err.style.display=prevErr;
+      btn.disabled=false;
+    }
+  });
+
+  mqParseUrlDate();
 
   // Ширина карточки всегда подгоняется под ширину надписи "SATOMI NUMERO" — на любом устройстве.
   // Если заголовок не помещается по ширине экрана, его размер уменьшается, пока не впишется.
