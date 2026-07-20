@@ -19,7 +19,8 @@
 .mq-h1{font-family:'Cinzel',serif;font-weight:500;font-size:30px;line-height:1;text-align:center;color:#E8DCC0;margin-bottom:.6rem;letter-spacing:.1em;white-space:nowrap}
 .mq-sub{font-family:'Cormorant',serif;font-style:italic;font-size:13px;text-align:center;color:#8A7859;margin-bottom:1.5rem;letter-spacing:.05em}
 
-.mq-form{background:#1A1526;border:0.5px solid #2A2438;padding:1rem;border-radius:2px;margin-bottom:1.5rem;display:flex;flex-direction:column;align-items:center;gap:10px}
+.mq-form{background:#1A1526;border:0.5px solid #2A2438;padding:1rem;border-radius:2px;margin-bottom:1.5rem;display:flex;flex-direction:column;align-items:center;gap:10px;overflow:hidden;transition:opacity .55s cubic-bezier(.4,0,.2,1), max-height .65s cubic-bezier(.4,0,.2,1), margin-bottom .65s cubic-bezier(.4,0,.2,1), padding .65s cubic-bezier(.4,0,.2,1)}
+.mq-form.mq-leaving{opacity:0;max-height:0!important;margin-bottom:0!important;padding-top:0!important;padding-bottom:0!important;pointer-events:none}
 .mq-date-label{font-family:'Cormorant',serif;font-style:italic;font-size:14px;color:#8A7859;text-align:center;letter-spacing:.03em}
 .mq-date-row{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;width:100%}
 .mq-in{background:transparent;border:none;border-bottom:0.5px solid #C9A961;font-family:'Cormorant',serif;font-size:26px;font-weight:500;color:#E8DCC0;text-align:center;padding:2px 0;outline:none}
@@ -42,7 +43,9 @@
 .mq-mat tr:last-child td{border-bottom:none}
 .mq-mat td:first-child{border-left:none}
 .mq-mat td:last-child{border-right:none}
-.mq-lab{font-family:'Cinzel',serif;font-size:8px;color:#7A6642;letter-spacing:.2em;text-transform:uppercase;display:block;margin-bottom:6px}
+.mq-mat td.mq-piece{transition:transform .6s cubic-bezier(.4,0,.2,1), opacity .55s cubic-bezier(.4,0,.2,1);transition-delay:var(--pd,0ms)}
+.mq-mat td.mq-piece.mq-piece-in{opacity:0;transform:translate(var(--px,0px),var(--py,0px)) rotate(var(--pr,0deg)) scale(.8)}
+.mq-lab{font-family:'Cinzel',serif;font-size:8px;color:#7A6642;letter-spacing:.2em;text-transform:uppercase;display:block;margin-bottom:6px;overflow-wrap:break-word;word-break:break-word}
 .mq-num{font-family:'Cormorant',serif;font-weight:500;font-size:22px;color:#E8DCC0;letter-spacing:2px;display:block;line-height:1}
 .mq-empty{font-family:'Cormorant',serif;font-style:italic;font-size:22px;color:#3A3346;display:block;line-height:1}
 .mq-full{background:#221B33}
@@ -54,6 +57,7 @@
 .mq-chs .mq-lab{color:#C9A961}
 .mq-chs .mq-num{color:#F5D98A;font-size:30px;font-weight:600}
 .mq-temp{background:#221B33}
+.mq-temp .mq-lab{letter-spacing:0;font-size:7px}
 .mq-temp .mq-num{color:#C9A961}
 .mq-outer{background:#221B33}
 .mq-outer .mq-num{color:#C9A961;font-size:20px;letter-spacing:0}
@@ -67,6 +71,12 @@
 .mq-share-btn:hover{background:#221B33;border-color:#C9A961;color:#F5D98A}
 .mq-share-btn:disabled{opacity:.5;cursor:default}
 .mq-share-hint{text-align:center;font-family:'Cormorant',serif;font-style:italic;font-size:12px;color:#7A6642;margin-top:.7rem;min-height:16px}
+
+#mqout{transition:opacity .5s cubic-bezier(.4,0,.2,1)}
+#mqout.mq-closed{opacity:0}
+#mqout.mq-open{opacity:1}
+
+.mq-fly{position:fixed;top:0;left:0;z-index:9999;pointer-events:none;font-family:'Cinzel',serif;font-weight:500;letter-spacing:.3em;color:#C9A961;font-size:11px;text-transform:uppercase;white-space:nowrap;transition:transform .95s cubic-bezier(.4,0,.2,1), opacity .5s ease .4s}
 </style>
 
 <div class="mq">
@@ -91,13 +101,13 @@
       <span class="mq-dot">·</span>
       <input id="mqy" class="mq-in" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="ГГГГ" maxlength="4" style="width:70px">
     </div>
-    <button class="mq-btn" onclick="mqCalc()">Раскрыть</button>
+    <button class="mq-btn" onclick="mqCalc({animate:true})">Раскрыть</button>
   </div>
 
   <div class="mq-err" id="mqerr"></div>
 
   <div id="mqout" style="display:none">
-    <div class="mq-sec"><span class="mq-sec-t">Quadratum · матрица</span></div>
+    <div class="mq-sec"><span class="mq-sec-t" id="mqSecT">Quadratum · матрица</span></div>
     <div class="mq-mat"><table id="mqmat"></table></div>
     <div class="mq-share">
       <button class="mq-share-btn" id="mqShareBtn" type="button">Поделиться</button>
@@ -130,12 +140,20 @@
     return `<td class="${cls}"><span class="mq-lab">${DN_RU[d]}</span>${val?`<span class="mq-num">${val}</span>`:`<span class="mq-empty">✦</span>`}</td>`;
   }
 
-  window.mqCalc=function(){
+  window.mqCalc=function(opts){
+    const reducedMotion=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const animate=!!(opts&&opts.animate)&&!reducedMotion;
     const err=document.getElementById('mqerr');err.textContent='';
+    const outEl=document.getElementById('mqout');
     const d=+document.getElementById('mqd').value||0;
     const m=+document.getElementById('mqm').value||0;
     const y=+document.getElementById('mqy').value||0;
-    if(!d||!m||!y||y<1900||d<1||d>31||m<1||m>12){err.textContent='введите корректную дату';document.getElementById('mqout').style.display='none';return;}
+    if(!d||!m||!y||y<1900||d<1||d>31||m<1||m>12){
+      err.textContent='введите корректную дату';
+      outEl.style.display='none';
+      outEl.classList.remove('mq-open','mq-closed');
+      return false;
+    }
 
     const dS=d.toString().padStart(2,'0'),mS=m.toString().padStart(2,'0'),yS=y.toString().padStart(4,'0');
     const d1=+dS[0],d2=+dS[1],m1=+mS[0],m2=+mS[1],y1=+yS[0],y2=+yS[1],y3=+yS[2],y4=+yS[3];
@@ -157,6 +175,9 @@
       return `<td class="mq-outer"><span class="mq-lab">${label}</span>${inner}</td>`;
     }
 
+    const dateLabel=dS+' · '+mS+' · '+yS;
+    document.getElementById('mqSecT').textContent=dateLabel;
+
     document.getElementById('mqmat').innerHTML=`
       <tr>
         <td colspan="2" class="mq-dopch"><span class="mq-lab">доп. числа</span><span class="mq-num">${PDch}, ${VDch}, ${TDch}, ${ChDch}</span></td>
@@ -168,8 +189,86 @@
       <tr>${cell(3,cnt)}${cell(6,cnt)}${cell(9,cnt)}${oc('Привычки',R3,null)}</tr>
       <tr><td class="mq-blank"></td>${oc('Быт',C2,null)}<td class="mq-blank"></td><td class="mq-blank"></td></tr>`;
 
-    document.getElementById('mqout').style.display='block';
+    if(animate){
+      mqAnimateReveal(dateLabel);
+    }else{
+      outEl.style.display='block';
+      outEl.classList.remove('mq-closed');
+      outEl.classList.add('mq-open');
+    }
+    return true;
   };
+
+  // Анимация раскрытия: дата «улетает» на место подписи, форма ввода сворачивается и исчезает,
+  // а матрица разворачивается на освободившемся месте.
+  function mqAnimateReveal(dateLabel){
+    const form=document.querySelector('.mq-form');
+    const dateRow=document.querySelector('.mq-date-row');
+    const outEl=document.getElementById('mqout');
+
+    // позиции считаем ДО того как форма схлопнется
+    const rowRect=dateRow.getBoundingClientRect();
+    const formRect=form.getBoundingClientRect();
+    const targetY=formRect.top+16;
+
+    const ghost=document.createElement('div');
+    ghost.className='mq-fly';
+    ghost.textContent=dateLabel;
+    document.body.appendChild(ghost);
+    const gRect=ghost.getBoundingClientRect();
+    const startLeft=rowRect.left+rowRect.width/2-gRect.width/2;
+    const startTop=rowRect.top+rowRect.height/2-gRect.height/2;
+    ghost.style.left=startLeft+'px';
+    ghost.style.top=startTop+'px';
+    void ghost.offsetHeight;
+    requestAnimationFrame(()=>{
+      ghost.style.transform=`translateY(${targetY-startTop-gRect.height/2}px) scale(.85)`;
+      ghost.style.opacity='0';
+    });
+    setTimeout(()=>{ghost.remove();},1000);
+
+    form.style.maxHeight=form.scrollHeight+'px';
+    void form.offsetHeight;
+    requestAnimationFrame(()=>{form.classList.add('mq-leaving');});
+    setTimeout(()=>{form.style.display='none';},700);
+
+    setTimeout(()=>{
+      mqPreparePuzzleCells();
+      outEl.classList.add('mq-closed');
+      outEl.style.display='block';
+      void outEl.offsetHeight;
+      requestAnimationFrame(()=>{
+        outEl.classList.remove('mq-closed');
+        outEl.classList.add('mq-open');
+        mqSettlePuzzleCells();
+      });
+    },600);
+  }
+
+  // Клетки матрицы стартуют смещёнными от центра (как разлетевшиеся кусочки пазла)
+  // и с небольшой волной по времени складываются на свои места.
+  function mqPreparePuzzleCells(){
+    let i=0;
+    document.querySelectorAll('#mqmat tr').forEach((tr,rIdx)=>{
+      const cells=tr.querySelectorAll('td');
+      const n=cells.length;
+      cells.forEach((td,cIdx)=>{
+        const dx=(cIdx-(n-1)/2)*28;
+        const dy=(rIdx-2)*24;
+        const rot=(i%2===0?-1:1)*(5+(i%3)*3);
+        const delay=i*28;
+        td.style.setProperty('--px',dx.toFixed(1)+'px');
+        td.style.setProperty('--py',dy.toFixed(1)+'px');
+        td.style.setProperty('--pr',rot+'deg');
+        td.style.setProperty('--pd',delay+'ms');
+        td.classList.add('mq-piece','mq-piece-in');
+        i++;
+      });
+    });
+  }
+  function mqSettlePuzzleCells(){
+    document.querySelectorAll('#mqmat td.mq-piece-in').forEach(td=>td.classList.remove('mq-piece-in'));
+  }
 
   // Поля даты: только цифры, авто-переход при заполнении поля, Enter/«Ввод» с экранной клавиатуры — тоже переход
   const mqd=document.getElementById('mqd'),mqm=document.getElementById('mqm'),mqy=document.getElementById('mqy');
@@ -182,7 +281,7 @@
     el.addEventListener('keydown',function(e){
       if(e.key==='Enter'){
         e.preventDefault();
-        if(next) next.focus(); else window.mqCalc();
+        if(next) next.focus(); else window.mqCalc({animate:true});
       }
     });
   }
