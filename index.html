@@ -1,3 +1,4 @@
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@400;500;600&family=Cinzel:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
@@ -98,6 +99,15 @@
 
 <script>
 (function(){
+  // Подстраховка: если хост-страница вставляет этот код в <body> и своего viewport-тега у неё нет,
+  // добавляем его через JS — иначе на телефоне вся страница рендерится уменьшенной.
+  if(!document.querySelector('meta[name="viewport"]')){
+    const vp=document.createElement('meta');
+    vp.name='viewport';
+    vp.content='width=device-width, initial-scale=1';
+    document.head.appendChild(vp);
+  }
+
   const DN_RU={1:'Характер',2:'Энергия',3:'Интерес',4:'Здоровье',5:'Логика',6:'Труд',7:'Удача',8:'Долг',9:'Память'};
   const digs=n=>Math.abs(n).toString().split('').map(Number);
   const sd=n=>digs(n).reduce((a,b)=>a+b,0);
