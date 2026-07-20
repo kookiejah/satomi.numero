@@ -16,10 +16,11 @@
 .mq-eyebrow-txt{font-family:'Cinzel',serif;font-weight:400;font-size:11px;letter-spacing:.5em;color:#C9A961;padding-left:.5em}
 .mq-eyebrow-sep{width:0.5px;height:12px;background:#7A6642}
 .mq-orn{text-align:center;color:#7A6642;font-size:14px;margin-bottom:1rem;letter-spacing:.4em}
-.mq-h1{font-family:'Cinzel',serif;font-weight:500;font-size:38px;line-height:1;text-align:center;color:#E8DCC0;margin-bottom:.6rem;letter-spacing:.15em}
+.mq-h1{font-family:'Cinzel',serif;font-weight:500;font-size:38px;line-height:1;text-align:center;color:#E8DCC0;margin-bottom:.6rem;letter-spacing:.15em;white-space:nowrap}
 .mq-sub{font-family:'Cormorant',serif;font-style:italic;font-size:15px;text-align:center;color:#8A7859;margin-bottom:2rem;letter-spacing:.05em}
 
 .mq-form{background:#1A1526;border:0.5px solid #2A2438;padding:1.25rem 1.5rem;border-radius:2px;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
+.mq-date-row{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
 .mq-lbl{font-family:'Cormorant',serif;font-style:italic;font-size:15px;color:#8A7859}
 .mq-in{background:transparent;border:none;border-bottom:0.5px solid #C9A961;font-family:'Cormorant',serif;font-size:26px;font-weight:500;color:#E8DCC0;text-align:center;padding:2px 0;outline:none}
 .mq-in::placeholder{color:#3A3346}
@@ -60,6 +61,26 @@
 .mq-blank{background:transparent}
 
 .mq-foot{text-align:center;font-family:'Cormorant',serif;font-style:italic;color:#5A4E38;font-size:13px;margin-top:1.5rem;letter-spacing:.05em}
+
+@media (max-width:560px){
+  .mq{padding:2rem 1.25rem;margin:0 auto;box-sizing:border-box}
+  .mq-h1{font-size:26px;letter-spacing:.08em}
+  .mq-eyebrow-num{font-size:13px}
+  .mq-eyebrow-txt{font-size:9px;letter-spacing:.4em}
+  .mq-sub{font-size:13px;margin-bottom:1.5rem}
+  .mq-form{flex-direction:column;padding:1rem 1rem;gap:10px}
+  .mq-date-row{width:100%;gap:8px}
+  .mq-btn{width:100%}
+  .mq-lbl{flex-basis:100%;margin-bottom:2px}
+  #mqd,#mqm{width:42px!important}
+  #mqy{width:68px!important}
+  .mq-lab{font-size:8px}
+  .mq-num{font-size:22px;letter-spacing:2px}
+  .mq-mat td{padding:12px 4px}
+  .mq-dopch .mq-num{font-size:15px}
+  .mq-chs .mq-num{font-size:30px}
+  .mq-outer .mq-num{font-size:20px}
+}
 </style>
 
 <div class="mq">
@@ -76,12 +97,14 @@
   <div class="mq-sub">— code of the soul, written at birth —</div>
 
   <div class="mq-form">
-    <span class="mq-lbl">рождён(а)</span>
-    <input id="mqd" class="mq-in" type="number" placeholder="ДД" min="1" max="31" style="width:56px">
-    <span class="mq-dot">·</span>
-    <input id="mqm" class="mq-in" type="number" placeholder="ММ" min="1" max="12" style="width:56px">
-    <span class="mq-dot">·</span>
-    <input id="mqy" class="mq-in" type="number" placeholder="ГГГГ" min="1900" max="2099" style="width:92px">
+    <div class="mq-date-row">
+      <span class="mq-lbl">рождён(а)</span>
+      <input id="mqd" class="mq-in" type="number" placeholder="ДД" min="1" max="31" style="width:56px">
+      <span class="mq-dot">·</span>
+      <input id="mqm" class="mq-in" type="number" placeholder="ММ" min="1" max="12" style="width:56px">
+      <span class="mq-dot">·</span>
+      <input id="mqy" class="mq-in" type="number" placeholder="ГГГГ" min="1900" max="2099" style="width:92px">
+    </div>
     <button class="mq-btn" onclick="mqCalc()">Раскрыть</button>
   </div>
 
@@ -147,5 +170,61 @@
 
     document.getElementById('mqout').style.display='block';
   };
+
+  // Enter переносит фокус на следующее поле даты, из последнего — считает
+  const mqd=document.getElementById('mqd'),mqm=document.getElementById('mqm'),mqy=document.getElementById('mqy');
+  function onEnter(el,next){
+    el.addEventListener('keydown',function(e){
+      if(e.key==='Enter'){
+        e.preventDefault();
+        if(next) next.focus(); else window.mqCalc();
+      }
+    });
+  }
+  onEnter(mqd,mqm);
+  onEnter(mqm,mqy);
+  onEnter(mqy,null);
+
+  // Мобильная адаптация: ширина карточки подгоняется под ширину надписи "SATOMI NUMERO"
+  function measureTextWidth(el,text){
+    const span=document.createElement('span');
+    const cs=getComputedStyle(el);
+    span.style.position='absolute';
+    span.style.visibility='hidden';
+    span.style.whiteSpace='nowrap';
+    span.style.fontFamily=cs.fontFamily;
+    span.style.fontSize=cs.fontSize;
+    span.style.fontWeight=cs.fontWeight;
+    span.style.letterSpacing=cs.letterSpacing;
+    span.textContent=text;
+    document.body.appendChild(span);
+    const w=span.offsetWidth;
+    document.body.removeChild(span);
+    return w;
+  }
+
+  function mqFitWidth(){
+    const mq=document.querySelector('.mq');
+    const h1=document.querySelector('.mq-h1');
+    if(!mq||!h1) return;
+    const isMobile=window.matchMedia('(max-width:560px)').matches;
+    if(isMobile){
+      const cs=getComputedStyle(mq);
+      const padL=parseFloat(cs.paddingLeft)||0;
+      const padR=parseFloat(cs.paddingRight)||0;
+      const titleW=measureTextWidth(h1,h1.textContent);
+      const total=Math.ceil(titleW+padL+padR);
+      const vw=Math.floor(window.innerWidth*0.94);
+      mq.style.width=Math.min(total,vw)+'px';
+      mq.style.maxWidth='100%';
+    }else{
+      mq.style.width='';
+      mq.style.maxWidth='';
+    }
+  }
+  window.addEventListener('load',mqFitWidth);
+  window.addEventListener('resize',mqFitWidth);
+  if(document.fonts&&document.fonts.ready){document.fonts.ready.then(mqFitWidth);}
+  mqFitWidth();
 })();
 </script>
