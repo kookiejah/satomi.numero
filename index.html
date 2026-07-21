@@ -540,10 +540,10 @@
       const html2canvas=await loadHtml2Canvas();
       if(document.fonts&&document.fonts.ready){ await document.fonts.ready; }
       const bgColor=getComputedStyle(mq).getPropertyValue('--mq-bg').trim()||'#0F0D1A';
-      const canvas=await html2canvas(mq,{backgroundColor:bgColor,scale:2});
-      const blob=await new Promise(res=>canvas.toBlob(res,'image/jpeg',0.92));
+      const canvas=await html2canvas(mq,{backgroundColor:bgColor,scale:3,ignoreElements:el=>el===mqShareHint});
+      const blob=await new Promise(res=>canvas.toBlob(res,'image/png'));
       if(!blob) throw new Error('no blob');
-      const file=new File([blob],'satomi-numero.jpg',{type:'image/jpeg'});
+      const file=new File([blob],'satomi-numero.png',{type:'image/png'});
       if(navigator.canShare&&navigator.canShare({files:[file]})){
         try{
           await navigator.share({files:[file],title:'Satomi Numero'});
@@ -556,7 +556,7 @@
         const a=document.createElement('a');
         const objUrl=URL.createObjectURL(blob);
         a.href=objUrl;
-        a.download='satomi-numero.jpg';
+        a.download='satomi-numero.png';
         a.click();
         setTimeout(()=>{URL.revokeObjectURL(objUrl);},0);
         mqShareHint.textContent='Изображение скачано — прикрепите его в мессенджер или письмо вручную';
