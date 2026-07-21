@@ -1,3 +1,4 @@
+
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -50,8 +51,8 @@
 .mq-theme-toggle{position:relative;width:44px;height:24px;border-radius:999px;background:var(--mq-panel);border:0.5px solid var(--mq-border);cursor:pointer;padding:0;flex-shrink:0;opacity:.55;transition:background-color .4s ease,border-color .4s ease,opacity .2s ease}
 .mq-theme-toggle:hover{border-color:var(--mq-gold);opacity:1}
 .mq-theme-toggle:focus-visible{opacity:1;outline:2px solid var(--mq-gold);outline-offset:2px}
-.mq-theme-toggle .mq-theme-thumb{position:absolute;top:2px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--mq-gold);display:flex;align-items:center;justify-content:center;transition:transform .35s cubic-bezier(.4,0,.2,1),background-color .4s ease}
-.mq-theme-toggle[aria-pressed="true"] .mq-theme-thumb{transform:translateX(20px)}
+.mq-theme-toggle .mq-theme-thumb{position:absolute;top:2.5px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--mq-gold);display:flex;align-items:center;justify-content:center;transition:transform .35s cubic-bezier(.4,0,.2,1),background-color .4s ease}
+.mq-theme-toggle[aria-pressed="true"] .mq-theme-thumb{transform:translateX(19px)}
 .mq-theme-toggle .mq-theme-icon{position:absolute;inset:0;margin:auto;width:12px;height:12px;color:var(--mq-bg);transition:opacity .25s ease}
 .mq-icon-sun{opacity:0}
 .mq-icon-moon{opacity:1}
@@ -222,7 +223,7 @@
   const MQ_DAY_MIN=1, MQ_DAY_MAX=31, MQ_MONTH_MIN=1, MQ_MONTH_MAX=12;
   function mqValidateDate(d,m,y){
     if(!d||!m||!y) return {ok:false,msg:'заполните дату полностью'};
-    if(y<1900||y>new Date().getFullYear()) return {ok:false,msg:'проверьте год рождения'};
+    if(y>new Date().getFullYear()) return {ok:false,msg:'проверьте год рождения'};
     if(m<MQ_MONTH_MIN||m>MQ_MONTH_MAX) return {ok:false,msg:'месяц должен быть от 01 до 12'};
     const daysInMonth=new Date(y,m,0).getDate();
     if(d<MQ_DAY_MIN||d>daysInMonth) return {ok:false,msg:`в этом месяце ${daysInMonth} дней`};
