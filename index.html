@@ -364,11 +364,18 @@
     const outEl=document.getElementById('mqout');
     const reducedMotion=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    function clearDateFields(){
+      mqd.value='';
+      mqm.value='';
+      mqy.value='';
+    }
+
     function showFormInstant(){
       form.classList.remove('mq-leaving');
       form.style.display='flex';
       form.style.opacity='';
       form.style.maxHeight='';
+      clearDateFields();
       document.getElementById('mqd').focus();
     }
 
@@ -400,6 +407,7 @@
       form.style.display='flex';
       form.style.opacity='0';
       form.style.maxHeight='0px';
+      clearDateFields();
       void form.offsetHeight;
       const naturalFormHeight=form.scrollHeight;
       requestAnimationFrame(()=>{
