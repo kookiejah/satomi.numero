@@ -1,4 +1,3 @@
-
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,7 +46,7 @@
 .mq-corner.br{bottom:14px;right:14px;border-left:none;border-top:none}
 .mq *:not(.mq-corner){position:relative}
 
-.mq-theme-row{display:flex;justify-content:flex-end;margin-bottom:.75rem;padding-right:6px;padding-top:2px}
+.mq-theme-row{display:flex;justify-content:flex-end;margin-bottom:.75rem;padding-right:6px;padding-top:2px;margin-top:-8px}
 .mq-theme-toggle{position:relative;width:44px;height:24px;border-radius:999px;background:var(--mq-panel);border:0.5px solid var(--mq-border);cursor:pointer;padding:0;flex-shrink:0;opacity:.55;transition:background-color .4s ease,border-color .4s ease,opacity .2s ease}
 .mq-theme-toggle:hover{border-color:var(--mq-gold);opacity:1}
 .mq-theme-toggle:focus-visible{opacity:1;outline:2px solid var(--mq-gold);outline-offset:2px}
@@ -548,7 +547,81 @@
       const html2canvas=await loadHtml2Canvas();
       if(document.fonts&&document.fonts.ready){ await document.fonts.ready; }
       const bgColor=getComputedStyle(mq).getPropertyValue('--mq-bg').trim()||'#0F0D1A';
-      const canvas=await html2canvas(mq,{backgroundColor:bgColor,scale:3,ignoreElements:el=>el===mqShareHint});
+      // html2canvas плохо рисует box-shadow с inset (клетка "Число судьбы" закрашивалась
+      // сплошным цветом поверх текста) и не умеет схлопывать границы таблицы
+      // (border-collapse:collapse): соседние 0.5px-рамки не сливаются в одну линию, а
+      // рисуются рядом, из-за чего вся сетка визуально становится вдвое толще, чем в браузере.
+      // Ниже для .mq-mat td каждая внутренняя граница отдаётся только одной стороне (правая
+      // и нижняя грани клетки, кроме последнего столбца/строки) — так линия рисуется один раз,
+      // как и должно быть при коллапсе. Акцент клетки "Число судьбы" сделан без border/outline/
+      // box-shadow — html2canvas их здесь не поддерживает или рисует некорректно — фон клетки
+      // красится золотом, а поверх (см. onclone ниже) подкладывается слой обычной заливки
+      // с отступом в 1px, снаружи остаётся тонкое золотое кольцо.
+      // Заодно переопределяем остальные цвета теми же селекторами, что и в основном CSS, но
+      // уже готовыми литеральными значениями вместо var(--mq-...) — на случай, если резолв
+      // переменных тоже где-то подведёт.
+      const cs=getComputedStyle(mq);
+      const V=name=>cs.getPropertyValue(name).trim();
+      const vBg=V('--mq-bg'),vText=V('--mq-text'),vBorder=V('--mq-border'),vAccent=V('--mq-accent-muted'),
+            vTextSoft=V('--mq-text-soft'),vPanel=V('--mq-panel'),vGold=V('--mq-gold'),vGoldBright=V('--mq-gold-bright'),
+            vCellFill=V('--mq-cell-fill'),vHeroFill=V('--mq-hero-fill'),vTextFaint=V('--mq-text-faint'),
+            vPlaceholder=V('--mq-placeholder');
+      const overrideCss=
+        '.mq{background-color:'+vBg+' !important;color:'+vText+' !important;border-color:'+vBorder+' !important;}'+
+        '.mq-corner{border-color:'+vAccent+' !important;}'+
+        '.mq-eyebrow-num,.mq-eyebrow-txt{color:'+vGold+' !important;}'+
+        '.mq-eyebrow-sep{background-color:'+vAccent+' !important;}'+
+        '.mq-orn{color:'+vAccent+' !important;}'+
+        '.mq-h1{color:'+vText+' !important;}'+
+        '.mq-sub{color:'+vTextSoft+' !important;}'+
+        '.mq-sec-t{color:'+vGold+' !important;background-color:'+vBg+' !important;}'+
+        '.mq-sec::before{background:'+vBorder+' !important;}'+
+        '.mq-mat{background-color:'+vPanel+' !important;border-color:'+vBorder+' !important;}'+
+        '.mq-mat td{border:none !important;border-right:0.5px solid '+vBorder+' !important;border-bottom:0.5px solid '+vBorder+' !important;}'+
+        '.mq-mat td:last-child{border-right:none !important;}'+
+        '.mq-mat tr:last-child td{border-bottom:none !important;}'+
+        '.mq-lab{color:'+vAccent+' !important;}'+
+        '.mq-num{color:'+vText+' !important;}'+
+        '.mq-empty{color:'+vPlaceholder+' !important;}'+
+        '.mq-full{background-color:'+vCellFill+' !important;}'+
+        '.mq-full .mq-num{color:'+vText+' !important;}'+
+        '.mq-dopch{background-color:'+vCellFill+' !important;}'+
+        '.mq-dopch .mq-num{color:'+vGold+' !important;}'+
+        '.mq-chs{background-color:'+vGold+' !important;box-shadow:none !important;}'+
+        '.mq-chs .mq-lab{color:'+vGold+' !important;}'+
+        '.mq-chs .mq-num{color:'+vGoldBright+' !important;}'+
+        '.mq-temp{background-color:'+vCellFill+' !important;}'+
+        '.mq-temp .mq-num{color:'+vGold+' !important;}'+
+        '.mq-outer{background-color:'+vCellFill+' !important;}'+
+        '.mq-outer .mq-num{color:'+vGold+' !important;}'+
+        '.mq-outer .mq-num small{color:'+vAccent+' !important;}'+
+        '.mq-foot{color:'+vTextFaint+' !important;}';
+      const canvas=await html2canvas(mq,{
+        backgroundColor:bgColor,
+        scale:3,
+        ignoreElements:el=>el===mqShareHint,
+        onclone:function(clonedDoc){
+          const styleTag=clonedDoc.createElement('style');
+          styleTag.textContent=overrideCss;
+          clonedDoc.head.appendChild(styleTag);
+          // Рамку клетки "Число судьбы" в этом окружении надёжно не нарисовать ни через
+          // box-shadow (заливает всю клетку), ни через border (спорит со схемой границ
+          // таблицы выше), ни через outline (html2canvas его не поддерживает вовсе).
+          // Поэтому фон самой клетки красим в золото, а поверх него, с отступом в 1px,
+          // подкладываем обычный фон ячейки — снаружи остаётся тонкое золотое кольцо.
+          const chsCell=clonedDoc.querySelector('.mq-chs');
+          if(chsCell){
+            const fill=clonedDoc.createElement('div');
+            fill.style.setProperty('position','absolute','important');
+            fill.style.setProperty('top','1px','important');
+            fill.style.setProperty('right','1px','important');
+            fill.style.setProperty('bottom','1px','important');
+            fill.style.setProperty('left','1px','important');
+            fill.style.setProperty('background-color',vHeroFill,'important');
+            chsCell.insertBefore(fill,chsCell.firstChild);
+          }
+        }
+      });
       const blob=await new Promise(res=>canvas.toBlob(res,'image/png'));
       if(!blob) throw new Error('no blob');
       const file=new File([blob],'satomi-numero.png',{type:'image/png'});
